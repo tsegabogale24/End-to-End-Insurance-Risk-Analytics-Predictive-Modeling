@@ -1,0 +1,59 @@
+name: CI - Insurance Risk Analytics
+
+on:
+  push:
+    branches: [main, task-*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇ Checkout Code
+      uses: actions/checkout@v3
+
+    - name:  Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name:  Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name:  Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+        pip install black flake8 nbformat pytest
+
+    - name:  Check Code Formatting (black)
+      run: |
+        black --check scripts/ notebooks/
+
+    - name:  Lint Python Code (flake8)
+      run: |
+        flake8 scripts/ notebooks/
+
+    - name:  Run Unit Tests (if any)
+      run: |
+        if [ -d "tests" ]; then
+          pytest tests/
+        else
+          echo " No tests directory found, skipping unit tests."
+        fi
+
+    - name:  Check Jupyter Notebooks Format
+      run: |
+        for file in notebooks/*.ipynb; do
+          echo " Validating: $file"
+          python -m nbformat --validate "$file" || true
+        done
