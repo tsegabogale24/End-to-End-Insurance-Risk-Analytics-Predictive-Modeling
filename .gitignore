@@ -1,2 +1,5 @@
 .venv
 data/
+!*.dvc
+!data/*.dvc
+
